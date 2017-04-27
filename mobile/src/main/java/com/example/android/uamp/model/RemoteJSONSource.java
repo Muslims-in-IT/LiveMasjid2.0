@@ -41,18 +41,19 @@ public class RemoteJSONSource implements MusicProviderSource {
     private static final String TAG = LogHelper.makeLogTag(RemoteJSONSource.class);
 
     protected static final String CATALOG_URL =
-        "http://storage.googleapis.com/automotive-media/music.json";
+        "http://livemajlis.com:8000/status-json.xsl";//http://storage.googleapis.com/automotive-media/music.json";
 
-    private static final String JSON_MUSIC = "music";
-    private static final String JSON_TITLE = "title";
-    private static final String JSON_ALBUM = "album";
-    private static final String JSON_ARTIST = "artist";
-    private static final String JSON_GENRE = "genre";
+    private static final String JSON_ICESTATS = "icestats";
     private static final String JSON_SOURCE = "source";
-    private static final String JSON_IMAGE = "image";
-    private static final String JSON_TRACK_NUMBER = "trackNumber";
-    private static final String JSON_TOTAL_TRACK_COUNT = "totalTrackCount";
-    private static final String JSON_DURATION = "duration";
+    private static final String JSON_TITLE = "title";
+    private static final String JSON_SERVERNAME = "server_name";
+    private static final String JSON_ARTIST = "server_description";
+    private static final String JSON_GENRE = "genre";
+    private static final String JSON_LISTENURL = "listenurl";
+    //private static final String JSON_IMAGE = "image";
+    //private static final String JSON_TRACK_NUMBER = "trackNumber";
+    //private static final String JSON_TOTAL_TRACK_COUNT = "totalTrackCount";
+    //private static final String JSON_DURATION = "duration";
 
     @Override
     public Iterator<MediaMetadataCompat> iterator() {
@@ -60,55 +61,58 @@ public class RemoteJSONSource implements MusicProviderSource {
             int slashPos = CATALOG_URL.lastIndexOf('/');
             String path = CATALOG_URL.substring(0, slashPos + 1);
             JSONObject jsonObj = fetchJSONFromUrl(CATALOG_URL);
+            JSONObject iceStats = jsonObj.getJSONObject(JSON_ICESTATS);
             ArrayList<MediaMetadataCompat> tracks = new ArrayList<>();
-            if (jsonObj != null) {
-                JSONArray jsonTracks = jsonObj.getJSONArray(JSON_MUSIC);
+            if (iceStats != null) {
+                JSONArray jsonTracks = iceStats.getJSONArray(JSON_SOURCE);
 
                 if (jsonTracks != null) {
                     for (int j = 0; j < jsonTracks.length(); j++) {
-                        tracks.add(buildFromJSON(jsonTracks.getJSONObject(j), path));
+                        tracks.add(buildFromJSON(jsonTracks.getJSONObject(j), path,jsonTracks.length(),j));
                     }
                 }
             }
             return tracks.iterator();
         } catch (JSONException e) {
-            LogHelper.e(TAG, e, "Could not retrieve music list");
-            throw new RuntimeException("Could not retrieve music list", e);
+            LogHelper.e(TAG, e, "Could not retrieve stream list");
+            throw new RuntimeException("Could not retrieve stream list", e);
         }
     }
 
-    private MediaMetadataCompat buildFromJSON(JSONObject json, String basePath) throws JSONException {
-        String title = json.getString(JSON_TITLE);
-        String album = json.getString(JSON_ALBUM);
+    private MediaMetadataCompat buildFromJSON(JSONObject json, String basePath, int totalTracks, int trackNo) throws JSONException {
+        String title="Title";
+        if (json.has(JSON_TITLE)) {title = json.getString(JSON_TITLE);}
+        else {title = json.getString(JSON_SERVERNAME);}
+        String album = json.getString(JSON_SERVERNAME);
         String artist = json.getString(JSON_ARTIST);
-        String genre = json.getString(JSON_GENRE);
-        String source = json.getString(JSON_SOURCE);
-        String iconUrl = json.getString(JSON_IMAGE);
-        int trackNumber = json.getInt(JSON_TRACK_NUMBER);
-        int totalTrackCount = json.getInt(JSON_TOTAL_TRACK_COUNT);
-        int duration = json.getInt(JSON_DURATION) * 1000; // ms
+        String genre = json.getString(JSON_GENRE).replaceAll("/","-");
+        String listenURL = json.getString(JSON_LISTENURL);
+        String iconUrl = "http://www.clipartbest.com/cliparts/KTn/exn/KTnexnkxc.png";//json.getString(JSON_IMAGE);
+        int trackNumber = trackNo;//json.getInt(JSON_TRACK_NUMBER);
+        int totalTrackCount = totalTracks;//json.getInt(JSON_TOTAL_TRACK_COUNT);
+        int duration = 1000000;//json.getInt(JSON_DURATION) * 1000; // ms
 
         LogHelper.d(TAG, "Found music track: ", json);
 
         // Media is stored relative to JSON file
-        if (!source.startsWith("http")) {
-            source = basePath + source;
+        if (!listenURL.startsWith("http")) {
+            listenURL = basePath + listenURL;
         }
         if (!iconUrl.startsWith("http")) {
             iconUrl = basePath + iconUrl;
         }
         // Since we don't have a unique ID in the server, we fake one using the hashcode of
-        // the music source. In a real world app, this could come from the server.
-        String id = String.valueOf(source.hashCode());
+        // the music listenURL. In a real world app, this could come from the server.
+        String id = String.valueOf(listenURL.hashCode());
 
-        // Adding the music source to the MediaMetadata (and consequently using it in the
+        // Adding the music listenURL to the MediaMetadata (and consequently using it in the
         // mediaSession.setMetadata) is not a good idea for a real world music app, because
         // the session metadata can be accessed by notification listeners. This is done in this
         // sample for convenience only.
         //noinspection ResourceType
         return new MediaMetadataCompat.Builder()
                 .putString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID, id)
-                .putString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE, source)
+                .putString(MusicProviderSource.CUSTOM_METADATA_TRACK_SOURCE, listenURL)
                 .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, album)
                 .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)
                 .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, duration)
