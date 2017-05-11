@@ -43,6 +43,7 @@ public class MediaItemViewHolder {
     public static final int STATE_PLAYABLE = 1;
     public static final int STATE_PAUSED = 2;
     public static final int STATE_PLAYING = 3;
+    public static final int STATE_OFFLINE = 4;
 
     private static ColorStateList sColorStatePlaying;
     private static ColorStateList sColorStateNotPlaying;

@@ -124,12 +124,17 @@ public class RemoteJSONSource implements MusicProviderSource {
             LogHelper.d(TAG, "Found music track: ", json);
 
             LogHelper.d(TAG, id);
-            if (!live.contains(id)){
-                genre = "Offline";
-            }
+
             // Media is stored relative to JSON file
             if (!listenURL.startsWith("http")) {
                 listenURL = "http://" + listenURL;
+            }
+
+            if (!live.contains(id)){
+                genre = "Offline";
+                title = "Last recording: "+title;
+                listenURL = listenURL.replace(":8000","/download/mp3")+"/latest.mp3";
+                //listenURL = listenURL.replace(":8000/","/download/mp3/dir2cast.php?dir=");
             }
             //if (!iconUrl.startsWith("http")) {
             //    iconUrl = basePath + iconUrl;
